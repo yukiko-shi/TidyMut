@@ -1984,60 +1984,54 @@ def convert_to_mutation_dataset_format(
         error_msg += "  Format 2: Include a sequence column with wild-type sequences"
         raise ValueError(error_msg)
 
+
 @pipeline_step
 def replace_in_protein_name(
-    data: Any,
+    data: pd.DataFrame,
     old: str,
     new: str = None,
     *,
     name_column: str = "name",
     inplace: bool = False,
-) -> Any:  
+) -> pd.DataFrame:  
     """
     Perform string replacement on the protein-name column (default 'name').
 
-    Behavior
-    --------
-    - If only `old` is provided: remove all occurrences of `old`.
-    - If both `old` and `new` are provided: replace all occurrences of `old` with `new`
-      (with `new` defaulting to an empty string).
-
     Parameters
-    --------
-    data : pandas.DataFrame or tuple
+    ----------
+    data : pandas.DataFrame
         The input table. You may pass a DataFrame directly, or a tuple like
-        `(DataFrame, meta1, meta2, ...)`. When a tuple is given, only the first
+        '(DataFrame, meta1, meta2, ...)'. When a tuple is given, only the first
         element (the DataFrame) is modified; the remaining elements are returned
         unchanged.
     old : str
         The non-empty substring to remove/replace.
     new : str, optional
-        The replacement substring. Defaults to `""` (i.e., deletion).
+        The replacement substring. Defaults to None (i.e., deletion).
     name_column : str, optional (keyword-only)
         Name of the column holding protein identifiers. Defaults to `"name"`.
     inplace : bool, optional (keyword-only)
-        If `True`, modify the input DataFrame in place. If `False` (default),
+        If 'True', modify the input DataFrame in place. If 'False' (default),
         operate on a copy and return the new DataFrame.
 
     Returns
     -------
-    pandas.DataFrame or tuple
-        If `data` is a DataFrame, returns the modified DataFrame.
-        If `data` is a tuple `(df, *rest)`, returns `(modified_df, *rest)`.
+    pandas.DataFrame
 
     Raises
     ------
     ValueError
-        If `old` is `None` or an empty string.
+        If 'old' is 'None' or an empty string.
     TypeError
-        If `data` is neither a DataFrame nor a tuple whose first element is a DataFrame.
+        If 'data' is neither a DataFrame nor a tuple whose first element is a DataFrame.
     KeyError
-        If `name_column` does not exist in the DataFrame.
+        If 'name_column' does not exist in the DataFrame.
 
 
     Examples
     --------
-    # remove ".pdb"
+    remove ".pdb":
+
     >>> df1 = pd.DataFrame({
     ...     'name': ['prot1.pdb', 'prot1.pdb', 'prot1.pdb', 'prot2.pdb', 'prot2.pdb'], 
     ...     'mut_info': ['A0S,Q1D', 'C2D', 'WT', 'E0F', 'WT'],
@@ -2052,7 +2046,9 @@ def replace_in_protein_name(
     2  prot1       WT   AQCDEF    0.0
     3  prot2      E0F  FGHIGHK    3.0
     4  prot2       WT  EGHIGHK    0.0
-    # replace ".pdb" with ".pross"
+    
+    replace ".pdb" with ".pross":
+    
     >>> df1_replaced = replace_in_protein_name(df1, ".pdb", ".pross")
     >>> df1_replaced
             name mut_info  mut_seq  score
@@ -2061,28 +2057,17 @@ def replace_in_protein_name(
     2  prot1.pross       WT   AQCDEF    0.0
     3  prot2.pross      E0F  FGHIGHK    3.0
     4  prot2.pross       WT  EGHIGHK    0.0
-    # works with (df, meta...) tuples as well
-    df_out, meta = replace_in_protein_name((df, meta), ".pdb")
     """
     
     if old is None or (isinstance(old, str) and old == ""):
-        raise ValueError("`old` must be a non-empty string.")
+        raise ValueError("'old' must be a non-empty string.")
     if new is None:
         new = ""
 
     if isinstance(data, pd.DataFrame):
         df = data
-        rest = None
-    elif isinstance(data, tuple):
-        if len(data) == 0:
-            raise TypeError("Empty tuple input; expected (DataFrame, ...).")
-        first = data[0]
-        if not isinstance(first, pd.DataFrame):
-            raise TypeError("The first element of the tuple must be a pandas.DataFrame.")
-        df = first
-        rest = data[1:]
     else:
-        raise TypeError(f"Unsupported input type: {type(data)}; expected DataFrame or tuple.")
+        raise TypeError(f"Unsupported input type: {type(data)}; expected DataFrame.")
 
     if name_column not in df.columns:
         cols_preview = ", ".join(map(str, df.columns[:20]))
@@ -2097,6 +2082,4 @@ def replace_in_protein_name(
 
     df_out[name_column] = df_out[name_column].map(_safe_replace)
 
-    if rest is None:
-        return df_out
-    return (df_out, *rest)
+    return df_out
